@@ -1,0 +1,25 @@
+# R session artifacts
+.RData
+.Rhistory
+.RDataTmp
+
+# RStudio project user settings
+.Rproj.user/
+
+# knitr / rmarkdown cache
+*_cache/
+/cache/
+
+# Packrat / renv
+packrat/lib*/
+packrat/src/
+renv/library/
+renv/staging/
+
+# Compiled shared objects
+*.so
+*.dll
+
+# Empty dist folder
+.dist/
+

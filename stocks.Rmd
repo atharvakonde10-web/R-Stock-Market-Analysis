@@ -1,0 +1,413 @@
+---
+title: "Stock Market Analysis Using R"
+output:
+  word_document: default
+  html_notebook: default
+---
+
+# 1. Import Dataset
+
+```{r}
+# Import the stock market dataset
+my_stocks <- read.csv(
+  "stocks.csv",
+  header = TRUE,
+  stringsAsFactors = FALSE
+)
+
+# Display first few rows
+head(my_stocks)
+```
+
+# 2. Data Preparation
+
+```{r}
+
+# Load required libraries
+library(dplyr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+
+# Check structure of the dataset
+str(my_stocks)
+
+# Display summary of the dataset
+summary(my_stocks)
+
+# Display column names
+colnames(my_stocks)
+
+# Display first 10 rows
+head(my_stocks, 10)
+```
+
+The CSV file has been loaded using the `read.csv()` function. The dataset contains stock market information such as stock symbol, date, opening price, highest price, lowest price, closing price, trading volume and adjusted closing price.
+
+The `str()` function is used to understand the structure of the dataset, while `summary()` provides a statistical summary of the columns. The `head()` function displays the first few records.
+
+# 3. Convert Date and Numeric Columns
+
+```{r}
+
+# Convert date column into Date format
+my_stocks$date <- as.Date(my_stocks$date)
+
+# List of numeric columns
+numeric_cols <- c(
+  "stock_price_open",
+  "stock_price_high",
+  "stock_price_low",
+  "stock_price_close",
+  "stock_volume",
+  "stock_price_adj_close"
+)
+
+# Convert numeric columns to numeric format
+for(col in numeric_cols) {
+  my_stocks[[col]] <- as.numeric(my_stocks[[col]])
+}
+
+# Check structure after conversion
+str(my_stocks)
+```
+
+The date column is converted into proper Date format so that it can be used for time-based analysis and graphs.
+
+The stock price and volume columns are also converted into numeric format.
+
+# 4. Check Missing Values
+
+```{r}
+
+# Count missing values in each column
+colSums(is.na(my_stocks))
+```
+
+The `is.na()` function is used to identify missing values in the dataset.
+
+# 5. Remove Missing Values
+
+```{r}
+
+my_stocks <- my_stocks %>%
+  drop_na(
+    stock_symbol,
+    date,
+    stock_price_open,
+    stock_price_high,
+    stock_price_low,
+    stock_price_close,
+    stock_volume
+  )
+
+# Check the cleaned dataset
+head(my_stocks)
+```
+
+Rows containing missing values in important stock-related columns are removed so that they do not affect the analysis.
+
+# 6. Number of Different Stocks
+
+```{r}
+
+num_stocks <- my_stocks %>%
+  summarise(
+    n_stocks = n_distinct(stock_symbol)
+  )
+
+num_stocks
+```
+
+The `n_distinct()` function is used to calculate the number of unique stock symbols present in the dataset.
+
+# 7. List of Different Stocks
+
+```{r}
+
+unique_stocks <- my_stocks %>%
+  distinct(stock_symbol) %>%
+  arrange(stock_symbol)
+
+unique_stocks
+```
+
+The `distinct()` function is used to identify the unique stock symbols. The `arrange()` function sorts the stock symbols alphabetically.
+
+# 8. Calculate Daily Price Change
+
+```{r}
+
+my_stocks <- my_stocks %>%
+  arrange(stock_symbol, date) %>%
+  group_by(stock_symbol) %>%
+  mutate(
+    daily_change = stock_price_close -
+                   lag(stock_price_close)
+  ) %>%
+  ungroup()
+
+head(my_stocks)
+```
+
+The daily change is calculated by subtracting the previous day's closing price from the current day's closing price.
+
+The `lag()` function is used to obtain the previous day's closing price.
+
+# 9. Highest Single-Day Gain
+
+```{r}
+
+highest_gain <- my_stocks %>%
+  filter(!is.na(daily_change)) %>%
+  filter(daily_change == max(daily_change)) %>%
+  select(
+    stock_symbol,
+    date,
+    daily_change
+  )
+
+highest_gain
+```
+
+This identifies the stock that experienced the highest single-day increase in closing price and the date on which it occurred.
+
+# 10. Highest Single-Day Loss
+
+```{r}
+
+highest_loss <- my_stocks %>%
+  filter(!is.na(daily_change)) %>%
+  filter(daily_change == min(daily_change)) %>%
+  select(
+    stock_symbol,
+    date,
+    daily_change
+  )
+
+highest_loss
+```
+
+This identifies the stock that experienced the highest single-day decrease in closing price and the date on which it occurred.
+
+# 11. Visualization 1 - XOM Closing Price Over Time
+
+```{r}
+
+xom_data <- my_stocks %>%
+  filter(stock_symbol == "XOM")
+
+ggplot(
+  xom_data,
+  aes(
+    x = date,
+    y = stock_price_close
+  )
+) +
+  geom_line(
+    color = "blue",
+    linewidth = 1
+  ) +
+  labs(
+    title = "XOM Closing Price Over Time",
+    x = "Date",
+    y = "Closing Price"
+  ) +
+  theme_minimal()
+```
+
+This graph shows the movement of XOM's closing price over time.
+
+# 12. Visualization 2 - XKK Closing Price Over Time
+
+```{r}
+
+xkk_data <- my_stocks %>%
+  filter(stock_symbol == "XKK")
+
+ggplot(
+  xkk_data,
+  aes(
+    x = date,
+    y = stock_price_close
+  )
+) +
+  geom_line(
+    color = "red",
+    linewidth = 1
+  ) +
+  labs(
+    title = "XKK Closing Price Over Time",
+    x = "Date",
+    y = "Closing Price"
+  ) +
+  theme_minimal()
+```
+
+This graph shows the movement of XKK's closing price over time.
+
+# 13. Visualization 3 - XOM Open vs Closing Price
+
+```{r}
+
+ggplot(
+  xom_data,
+  aes(x = date)
+) +
+  geom_line(
+    aes(
+      y = stock_price_open,
+      color = "Opening Price"
+    ),
+    linewidth = 0.8
+  ) +
+  geom_line(
+    aes(
+      y = stock_price_close,
+      color = "Closing Price"
+    ),
+    linewidth = 0.8
+  ) +
+  labs(
+    title = "XOM Opening Price vs Closing Price",
+    x = "Date",
+    y = "Price",
+    color = "Price Type"
+  ) +
+  theme_minimal()
+```
+
+This graph compares XOM's opening price and closing price for each trading day.
+
+# 14. Visualization 4 - XOM High vs Low Price
+
+```{r}
+
+ggplot(
+  xom_data,
+  aes(x = date)
+) +
+  geom_line(
+    aes(
+      y = stock_price_high,
+      color = "High Price"
+    ),
+    linewidth = 0.8
+  ) +
+  geom_line(
+    aes(
+      y = stock_price_low,
+      color = "Low Price"
+    ),
+    linewidth = 0.8
+  ) +
+  labs(
+    title = "XOM High Price vs Low Price",
+    x = "Date",
+    y = "Price",
+    color = "Price Type"
+  ) +
+  theme_minimal()
+```
+
+This graph compares the highest and lowest prices recorded for XOM during each trading day.
+
+# 15. Visualization 5 - XOM Trading Volume
+
+```{r}
+
+ggplot(
+  xom_data,
+  aes(
+    x = date,
+    y = stock_volume
+  )
+) +
+  geom_line(
+    color = "darkgreen",
+    linewidth = 0.8
+  ) +
+  labs(
+    title = "XOM Trading Volume Over Time",
+    x = "Date",
+    y = "Trading Volume"
+  ) +
+  theme_minimal()
+```
+
+This graph shows the number of shares traded for XOM over time.
+
+# 16. Average Closing Price of Stocks
+
+```{r}
+
+average_close <- my_stocks %>%
+  group_by(stock_symbol) %>%
+  summarise(
+    average_closing_price =
+      mean(stock_price_close, na.rm = TRUE)
+  ) %>%
+  arrange(desc(average_closing_price))
+
+head(average_close, 10)
+```
+
+This calculates the average closing price for each stock in the dataset.
+
+# 17. Visualization 6 - Top 10 Stocks by Average Closing Price
+
+```{r}
+
+top_10_stocks <- average_close %>%
+  slice_head(n = 10)
+
+ggplot(
+  top_10_stocks,
+  aes(
+    x = reorder(
+      stock_symbol,
+      average_closing_price
+    ),
+    y = average_closing_price
+  )
+) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Top 10 Stocks by Average Closing Price",
+    x = "Stock Symbol",
+    y = "Average Closing Price"
+  ) +
+  theme_minimal()
+```
+
+This bar chart compares the average closing prices of the top 10 stocks.
+
+# 18. Final Results
+
+```{r}
+
+cat("=====================================\n")
+cat("       STOCK MARKET ANALYSIS\n")
+cat("=====================================\n\n")
+
+cat(
+  "Number of different stocks:",
+  num_stocks$n_stocks,
+  "\n\n"
+)
+
+cat("Highest Single-Day Gain:\n")
+print(highest_gain)
+
+cat("\nHighest Single-Day Loss:\n")
+print(highest_loss)
+```
+
+# 19. Conclusion
+
+The stock market dataset was successfully imported and analyzed using R.
+
+The analysis included data preparation, identification of different stocks, calculation of daily price changes, identification of the highest single-day gain and loss, and visualization of stock price and trading volume.
+
+The visualizations provide a clear understanding of stock price movements, opening and closing prices, high and low prices, trading volume, and average closing prices.
